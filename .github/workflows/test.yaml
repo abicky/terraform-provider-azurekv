@@ -1,0 +1,83 @@
+name: Tests
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+  push:
+    paths-ignore:
+      - 'README.md'
+
+permissions:
+  contents: read
+  # For Azure login with OIDC
+  # cf. https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure#adding-permissions-settings
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: 'go.mod'
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_wrapper: false
+
+      # `go test` uses only a high-confidence subset of go vet, so execute also `go vet`
+      - run: make vet
+
+      - name: Format code
+        run: |
+          make fmt
+          git diff --exit-code || \
+            (echo; echo "Unexpected difference in directories after formatting code. Run 'make fmt' command and commit."; exit 1)
+
+      - name: Generate code
+        run: |
+          make generate
+          git diff --exit-code || \
+            (echo; echo "Unexpected difference in directories after code generation. Run 'make generate' command and commit."; exit 1)
+
+      - run: make build
+
+  # Run acceptance tests in a matrix with Terraform CLI versions
+  test:
+    name: Terraform Provider Acceptance Tests
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: test
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform:
+          - '1.11.*'
+          - '1.12.*'
+          - '1.13.*'
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: 'go.mod'
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+
+      - run: make testacc
+        env:
+          TF_ACC: "1"
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
