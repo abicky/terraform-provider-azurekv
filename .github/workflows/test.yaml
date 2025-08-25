@@ -34,7 +34,6 @@ jobs:
 
       - name: Format code
         run: |
-          echo test
           make fmt
           git diff --exit-code || \
             (echo; echo "Unexpected difference in directories after formatting code. Run 'make fmt' command and commit."; exit 1)
