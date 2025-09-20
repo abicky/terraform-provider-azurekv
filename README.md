@@ -2,7 +2,7 @@
 
 The Terraform provider for Azure Key Vault allows you to manage Key Vault secrets without requiring the `Microsoft.KeyVault/vaults/secrets/getSecret/action` permission, by leveraging [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral/write-only).
 
-Even if you use [`ignore_changes`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#ignore_changes) to avoid wtoring secret values directly in Terraform files, the actual secret values are still written to the state file. Write-only arguments were introduced to solve this problem. However, the [`azurerm_key_vault_secret`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) resource still requires the `Microsoft.KeyVault/vaults/secrets/getSecret/action` permission even if you use write-only arguments. This means you must grant that permission to anyone who runs `terraform plan`.
+Even if you use [`ignore_changes`](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#ignore_changes) to avoid storing secret values directly in Terraform files, the actual secret values are still written to the state file. Write-only arguments were introduced to solve this problem. However, the [`azurerm_key_vault_secret`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) resource still requires the `Microsoft.KeyVault/vaults/secrets/getSecret/action` permission even if you use write-only arguments. This means you must grant that permission to anyone who runs `terraform plan`.
 This provider addresses that limitation.
 
 > [!WARNING]
