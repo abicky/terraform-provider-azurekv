@@ -2,6 +2,7 @@ package provider_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -31,6 +32,14 @@ func TestAccSecretResource_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				ResourceName:    "azurekv_secret.test",
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				SkipFunc: func() (bool, error) {
+					return os.Getenv("SKIP_IMPORT_STATE_USING_RESOURCE_IDENTITY") == "true", nil
+				},
+			},
 		},
 	})
 }
@@ -55,6 +64,14 @@ func TestAccSecretResource_complete(t *testing.T) {
 				ResourceName:      "azurekv_secret.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			{
+				ResourceName:    "azurekv_secret.test",
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				SkipFunc: func() (bool, error) {
+					return os.Getenv("SKIP_IMPORT_STATE_USING_RESOURCE_IDENTITY") == "true", nil
+				},
 			},
 		},
 	})

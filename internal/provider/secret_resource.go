@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -32,6 +33,7 @@ var _ resource.Resource = (*SecretResource)(nil)
 var _ resource.ResourceWithConfigure = (*SecretResource)(nil)
 var _ resource.ResourceWithModifyPlan = (*SecretResource)(nil)
 var _ resource.ResourceWithImportState = (*SecretResource)(nil)
+var _ resource.ResourceWithIdentity = (*SecretResource)(nil)
 
 func NewSecretResource() resource.Resource {
 	return &SecretResource{}
@@ -49,6 +51,11 @@ type SecretResourceModel struct {
 }
 
 var _ SecretModel = (*SecretResourceModel)(nil)
+
+type SecretResourceIdentityModel struct {
+	Name       types.String `tfsdk:"name"`
+	KeyVaultID types.String `tfsdk:"key_vault_id"`
+}
 
 func (r *SecretResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_secret"
@@ -140,6 +147,21 @@ func (r *SecretResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	}
 }
 
+func (r *SecretResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"name": identityschema.StringAttribute{
+				Description:       "The name of the Key Vault Secret.",
+				RequiredForImport: true,
+			},
+			"key_vault_id": identityschema.StringAttribute{
+				Description:       "The ID of the Key Vault where the Secret is managed.",
+				RequiredForImport: true,
+			},
+		},
+	}
+}
+
 func (r *SecretResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
@@ -198,6 +220,12 @@ func (r *SecretResource) Create(ctx context.Context, req resource.CreateRequest,
 	resp.Diagnostics.Append(setSecretData(&model, setResp.ID, setResp.Attributes, setResp.ContentType, setResp.Tags)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+
+	identity := SecretResourceIdentityModel{
+		Name:       model.Name,
+		KeyVaultID: model.KeyVaultID,
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func (r *SecretResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -222,6 +250,12 @@ func (r *SecretResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+
+	identity := SecretResourceIdentityModel{
+		Name:       model.Name,
+		KeyVaultID: model.KeyVaultID,
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func (r *SecretResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -312,40 +346,65 @@ func (r *SecretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *SecretResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	ctx = tflog.SetField(ctx, LogKeyResourceID, req.ID)
+	var keyVaultID string
 
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	if !req.Identity.Raw.IsNull() {
+		var identity SecretResourceIdentityModel
+		resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	if r.client.GetSubscriptionID() == "" {
-		resp.Diagnostics.AddError(
-			"Missing Configuration",
-			"Subscription ID is required to import a secret",
-		)
-		return
-	}
+		name := identity.Name.ValueString()
+		keyVaultID = identity.KeyVaultID.ValueString()
+		secretProperties, err := r.client.GetSecretProperties(ctx, keyVaultID, name, "", nil)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to Get Secret Properties", err.Error())
+			return
+		}
 
-	// Set key_vault_id manually because the configuration value is not accessible
-	// cf. https://discuss.hashicorp.com/t/access-resource-configuration-in-plugin-framework-read/57440
-	vaultName, name, err := extractVaultNameAndName(req.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid ID",
-			err.Error(),
-		)
-		return
-	}
+		ctx = tflog.SetField(ctx, LogKeyResourceID, secretProperties.ID)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), secretProperties.ID)...)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		ctx = tflog.SetField(ctx, LogKeyResourceID, req.ID)
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 
-	keyVaultID, err := r.client.GetKeyVaultID(ctx, vaultName)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to Get KeyVaults",
-			err.Error(),
-		)
+		if r.client.GetSubscriptionID() == "" {
+			resp.Diagnostics.AddError(
+				"Missing Configuration",
+				"Subscription ID is required to import a secret",
+			)
+			return
+		}
+
+		// Set key_vault_id manually because the configuration value is not accessible
+		// cf. https://discuss.hashicorp.com/t/access-resource-configuration-in-plugin-framework-read/57440
+		vaultName, name, err := extractVaultNameAndName(req.ID)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid ID",
+				err.Error(),
+			)
+			return
+		}
+
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		keyVaultID, err = r.client.GetKeyVaultID(ctx, vaultName)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Failed to Get KeyVaults",
+				err.Error(),
+			)
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("key_vault_id"), keyVaultID)...)

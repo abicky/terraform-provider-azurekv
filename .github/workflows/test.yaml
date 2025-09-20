@@ -81,3 +81,4 @@ jobs:
         env:
           TF_ACC: "1"
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          SKIP_IMPORT_STATE_USING_RESOURCE_IDENTITY: ${{ matrix.terraform == '1.11.*' }}
