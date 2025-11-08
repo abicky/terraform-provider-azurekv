@@ -126,7 +126,7 @@ When you update the secret value, increment the `value_wo_version`.
 
 ### Optional
 
-- `subscription_id` (String) The subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` environment variable and is only required for import.
+- `subscription_id` (String) The subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` environment variable and is only required for import using ID.
 
 ## Authentication
 

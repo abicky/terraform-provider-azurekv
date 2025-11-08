@@ -37,7 +37,7 @@ func (p *AzurekvProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 		MarkdownDescription: "The Azure Key Vault provider allows you to manage Key Vault secrets without requiring the `Microsoft.KeyVault/vaults/secrets/getSecret/action` permission, by leveraging [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral/write-only).",
 		Attributes: map[string]schema.Attribute{
 			"subscription_id": schema.StringAttribute{
-				MarkdownDescription: "The subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` environment variable and is only required for import.",
+				MarkdownDescription: "The subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` environment variable and is only required for import using ID.",
 				Optional:            true,
 			},
 		},
