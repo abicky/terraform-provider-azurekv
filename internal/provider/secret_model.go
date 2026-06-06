@@ -13,9 +13,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+const (
+	// Vault name and Managed HSM pool name must be a 3-24 character string, containing only 0-9, a-z, A-Z, and not consecutive -.
+	// See: https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates
+	keyVaultNamePattern = "[A-Za-z0-9-]{3,24}"
+)
+
 var (
-	idRegex         = regexp.MustCompile(`\Ahttps://([^/]+)\.vault.azure.net/secrets/([^/]+)`)
-	keyVaultIDRegex = regexp.MustCompile(`\A/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft.KeyVault/vaults/([^/]+)\z`)
+	idRegex         = regexp.MustCompile(`\Ahttps://(` + keyVaultNamePattern + `)\.vault\.azure\.net/secrets/([^/]+)`)
+	keyVaultIDRegex = regexp.MustCompile(`\A/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.KeyVault/vaults/(` + keyVaultNamePattern + `)\z`)
 )
 
 type SecretModel interface {
