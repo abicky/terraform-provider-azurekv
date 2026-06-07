@@ -16,6 +16,10 @@ import (
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+// AzureRM 4.55.0 represents unset optional secret dates as empty strings,
+// which does not match this provider's null values in acceptance checks.
+const azurermAcceptanceTestVersion = "4.54.0"
+
 type keyVault struct {
 	id             string
 	subscriptionID string

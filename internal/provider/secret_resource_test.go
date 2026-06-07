@@ -22,7 +22,7 @@ func TestAccSecretResource_basic(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azurerm": {
 				Source:            "hashicorp/azurerm",
-				VersionConstraint: "~> 4.0",
+				VersionConstraint: azurermAcceptanceTestVersion,
 			},
 		},
 		Steps: []resource.TestStep{
@@ -55,7 +55,7 @@ func TestAccSecretResource_complete(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azurerm": {
 				Source:            "hashicorp/azurerm",
-				VersionConstraint: "~> 4.0",
+				VersionConstraint: azurermAcceptanceTestVersion,
 			},
 		},
 		Steps: []resource.TestStep{
@@ -88,7 +88,7 @@ func TestAccSecretResource_update(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azurerm": {
 				Source:            "hashicorp/azurerm",
-				VersionConstraint: "~> 4.0",
+				VersionConstraint: azurermAcceptanceTestVersion,
 			},
 		},
 		Steps: []resource.TestStep{
