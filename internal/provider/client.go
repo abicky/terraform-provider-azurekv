@@ -69,8 +69,11 @@ func (c *client) GetSecretProperties(ctx context.Context, keyVaultID, name strin
 		}
 
 		for _, secret := range page.Value {
-			if version != "" && version != secret.ID.Version() {
-				return secret, nil
+			if version != "" {
+				if version == secret.ID.Version() {
+					return secret, nil
+				}
+				continue
 			}
 			if latestSecretProperties == nil || secret.Attributes.Created.After(*latestSecretProperties.Attributes.Created) {
 				latestSecretProperties = secret
