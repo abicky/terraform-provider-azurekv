@@ -1,4 +1,4 @@
-# Terraform Provider for Auzre Key Vault
+# Terraform Provider for Azure Key Vault
 
 The Terraform provider for Azure Key Vault allows you to manage Key Vault secrets without requiring the `Microsoft.KeyVault/vaults/secrets/getSecret/action` permission, by leveraging [write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral/write-only).
 
