@@ -5,22 +5,26 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  # For creating a new release
-  contents: write
+permissions: {}
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: write # Required for GoReleaser to create the release.
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
+          # Prevent later steps from reusing the checkout's git credentials
+          persist-credentials: false
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: 'go.mod'
+          # Prevent cache poisoning
+          cache: false
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         id: import_gpg
