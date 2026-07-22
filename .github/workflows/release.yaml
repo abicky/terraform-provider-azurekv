@@ -12,7 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      contents: write # Required for GoReleaser to create the release.
+      # Required for GoReleaser to create the release.
+      contents: write
+      # Required for artifact attestations
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -32,9 +36,14 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
       - name: Run GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+
+      - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-checksums: ${{ format('dist/{0}_{1}_SHA256SUMS', fromJSON(steps.goreleaser.outputs.metadata).project_name, fromJSON(steps.goreleaser.outputs.metadata).version) }}
